@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disbursement Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #f4f6fb;
+  --surface:  #ffffff;
+  --border:   #e2e8f0;
+  --text:     #0f1f35;
+  --muted:    #7a8fa6;
+  --accent:   #2563eb;
+  --accent2:  #059669;
+  --accent3:  #dc2626;
+  --accent4:  #d97706;
+  --accent5:  #7c3aed;
+  --shadow:   0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); font-family: 'DM Mono', monospace; color: var(--text); }
+
+/* TOPBAR */
+.topbar {
+  background: var(--text);
+  padding: 0 40px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-logo { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.topbar-logo span { color: var(--accent); }
+.topbar-sep { width: 1px; height: 20px; background: #2a3a50; }
+.topbar-sub { font-size: 10px; color: #4a6080; letter-spacing: 2px; text-transform: uppercase; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+#last-updated { font-size: 10px; color: #3a5070; }
+.refresh-btn { background: #1a3050; border: none; color: #7a9ab5; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; transition: all 0.2s; }
+.refresh-btn:hover { background: var(--accent); color: #fff; }
+
+/* MAIN */
+.main { padding: 28px 40px 60px; max-width: 1400px; margin: 0 auto; }
+
+/* SECTION LABEL */
+.section-label { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; padding-left: 2px; }
+
+/* KPI ROW */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+.kpi {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.kpi:hover { transform: translateY(-2px); }
+.kpi-icon { font-size: 22px; margin-bottom: 12px; }
+.kpi-label { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+.kpi-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.kpi-footer { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.kpi-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.badge-up   { background: #d1fae5; color: #065f46; }
+.badge-down { background: #fee2e2; color: #991b1b; }
+.badge-neu  { background: #e0e7ff; color: #3730a3; }
+.kpi-period { font-size: 10px; color: var(--muted); }
+.kpi.blue   .kpi-value { color: var(--accent);  }
+.kpi.green  .kpi-value { color: var(--accent2); }
+.kpi.red    .kpi-value { color: var(--accent3); }
+.kpi.purple .kpi-value { color: var(--accent5); }
+.kpi-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+.kpi.blue   .kpi-bar { background: var(--accent);  }
+.kpi.green  .kpi-bar { background: var(--accent2); }
+.kpi.red    .kpi-bar { background: var(--accent3); }
+.kpi.purple .kpi-bar { background: var(--accent5); }
+
+/* CHART ROWS */
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+.row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+
+.chart-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+.chart-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+.chart-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.chart-sub { font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
+.chart-badge { font-size: 10px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; }
+.chart-wrap { position: relative; }
+.h240 { height: 240px; }
+.h280 { height: 280px; }
+.h200 { height: 200px; }
+
+/* CONTROLS */
+.ctrl-row { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+.ctrl-btn { background: var(--surface); border: 1.5px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; transition: all 0.15s; }
+.ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ctrl-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+/* ANOMALY */
+.anomaly-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
+.anomaly-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 11px; }
+.anomaly-item.high { border-color: #fca5a5; background: #fff5f5; }
+.anomaly-item.low  { border-color: #a5f3cd; background: #f0fdf7; }
+.anomaly-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.anomaly-item.high .anomaly-dot { background: var(--accent3); }
+.anomaly-item.low  .anomaly-dot { background: var(--accent2); }
+.anomaly-period { font-weight: 500; color: var(--text); min-width: 90px; }
+.anomaly-desc { color: var(--muted); flex: 1; }
+.anomaly-val { font-weight: 500; }
+.anomaly-item.high .anomaly-val { color: var(--accent3); }
+.anomaly-item.low  .anomaly-val { color: var(--accent2); }
+
+/* FORECAST TABLE */
+.forecast-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.forecast-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); font-size: 11px; }
+.forecast-label { color: var(--muted); }
+.forecast-val { font-weight: 500; color: var(--accent); }
+.forecast-range { font-size: 10px; color: var(--muted); }
+
+/* HEATMAP GRID */
+.hm-grid { display: grid; grid-template-columns: 40px repeat(12, 1fr); gap: 3px; margin-top: 4px; }
+.hm-cell { height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; cursor: default; transition: transform 0.1s; }
+.hm-cell:hover { transform: scale(1.15); z-index: 5; position: relative; }
+.hm-label { font-size: 10px; color: var(--muted); display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+.hm-month-label { font-size: 9px; color: var(--muted); display: flex; align-items: center; justify-content: center; height: 20px; }
+
+/* LOADING */
+#loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 16px; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 12px; color: var(--muted); }
+
+#error-banner { display: none; background: #fef2f2; border-left: 4px solid var(--accent3); padding: 12px 40px; font-size: 12px; color: #991b1b; margin-bottom: 20px; }
+
+@media(max-width:900px){
+  .main { padding: 20px; }
+  .topbar { padding: 0 20px; }
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .row-2,.row-3 { grid-template-columns: 1fr; }
+  .row-4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Memuat data disbursement...</div>
+</div>
+
+<div id="app" style="display:none">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">Disbursement <span>Intelligence</span></div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-sub">Analytics Dashboard</div>
+    <div class="topbar-right">
+      <div id="last-updated"></div>
+      <button class="refresh-btn" onclick="loadData()">↺ Refresh</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div id="error-banner"></div>
+
+    <!-- CONTROLS -->
+    <div class="ctrl-row">
+      <span style="font-size:10px;color:var(--muted);letter-spacing:2px">METRIK</span>
+      <button class="ctrl-btn active" data-m="count"   onclick="setMetric('count')">Transaksi</button>
+      <button class="ctrl-btn"        data-m="nominal" onclick="setMetric('nominal')">Nominal</button>
+      <div class="ctrl-sep"></div>
+      <span style="font-size:10px;color:var(--muted);letter-spacing:2px">GRANULARITAS</span>
+      <button class="ctrl-btn active" data-g="monthly" onclick="setGran('monthly')">Bulanan</button>
+      <button class="ctrl-btn"        data-g="weekly"  onclick="setGran('weekly')">Mingguan</button>
+    </div>
+
+    <!-- ROW 1: KPIs -->
+    <div class="section-label">Key Performance Indicators</div>
+    <div class="kpi-row">
+      <div class="kpi blue">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">Total Revenue (Fee)</div>
+        <div class="kpi-value" id="kpi-revenue">—</div>
+        <div class="kpi-footer">
+          <div class="kpi-badge badge-neu" id="kpi-revenue-badge">—</div>
+          <div class="kpi-period">vs bulan lalu</div>
+        </div>
+        <div class="kpi-bar"></div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">Total Transaksi</div>
+        <div class="kpi-value" id="kpi-trx">—</div>
+        <div class="kpi-footer">
+          <div class="kpi-badge badge-neu" id="kpi-trx-badge">—</div>
+          <div class="kpi-period">vs bulan lalu</div>
+        </div>
+        <div class="kpi-bar"></div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-icon">📈</div>
+        <div class="kpi-label">Growth MoM</div>
+        <div class="kpi-value" id="kpi-growth">—</div>
+        <div class="kpi-footer">
+          <div class="kpi-badge badge-neu" id="kpi-growth-badge">—</div>
+          <div class="kpi-period">bulan terakhir</div>
+        </div>
+        <div class="kpi-bar"></div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-icon">👤</div>
+        <div class="kpi-label">Active Borrowers</div>
+        <div class="kpi-value" id="kpi-users">—</div>
+        <div class="kpi-footer">
+          <div class="kpi-badge badge-neu" id="kpi-users-badge">—</div>
+          <div class="kpi-period">bulan terakhir</div>
+        </div>
+        <div class="kpi-bar"></div>
+      </div>
+    </div>
+
+    <!-- ROW 2: BIG CHARTS -->
+    <div class="section-label">Revenue Trend & Growth</div>
+    <div class="row-2">
+      <!-- Revenue Trend -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Revenue Trend</div>
+            <div class="chart-sub">SERVICE FEE + 3-PERIOD MOVING AVERAGE</div>
+          </div>
+          <div class="chart-badge" id="trend-total">—</div>
+        </div>
+        <div class="chart-wrap h280"><canvas id="chart-trend"></canvas></div>
+      </div>
+      <!-- Cumulative Growth -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Cumulative Growth</div>
+            <div class="chart-sub">AKUMULASI TRANSAKSI & NOMINAL SEPANJANG WAKTU</div>
+          </div>
+        </div>
+        <div class="chart-wrap h280"><canvas id="chart-cumulative"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: BUSINESS INTEL -->
+    <div class="section-label">Business Intelligence</div>
+    <div class="row-3">
+      <!-- Revenue by Nominal -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Revenue by Nominal Range</div>
+            <div class="chart-sub">KONTRIBUSI FEE PER KELOMPOK NOMINAL</div>
+          </div>
+        </div>
+        <div class="chart-wrap h240"><canvas id="chart-revnom"></canvas></div>
+      </div>
+      <!-- MoM Comparison -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">MoM Comparison</div>
+            <div class="chart-sub">PERTUMBUHAN BULAN KE BULAN (%)</div>
+          </div>
+        </div>
+        <div class="chart-wrap h240"><canvas id="chart-mom"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW 4: ADVANCED -->
+    <div class="section-label">Advanced Insights</div>
+    <div class="row-4">
+      <!-- Heatmap -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Activity Heatmap</div>
+            <div class="chart-sub">INTENSITAS PER TAHUN × BULAN</div>
+          </div>
+        </div>
+        <div id="heatmap-wrap"></div>
+      </div>
+      <!-- Forecast -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Forecast</div>
+            <div class="chart-sub">PROYEKSI 3 BULAN KE DEPAN (LINEAR REGRESSION)</div>
+          </div>
+        </div>
+        <div class="chart-wrap h200"><canvas id="chart-forecast"></canvas></div>
+        <div class="forecast-list" id="forecast-list"></div>
+      </div>
+      <!-- Anomaly -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Anomaly Detection</div>
+            <div class="chart-sub">PERIODE DI LUAR ±1.5σ DARI RATA-RATA</div>
+          </div>
+        </div>
+        <div class="anomaly-list" id="anomaly-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynAvePbjWy6NUN9BRR2k1GkHbeF485gmI2pkGErOjYaeaTf1NrMzE7BbAXqxh_J7tDHA/exec';
+const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+const BINS   = [
+  {label:'<10 Jt',  min:0,        max:10000000},
+  {label:'10–15 Jt',min:10000000, max:15000000},
+  {label:'15–20 Jt',min:15000000, max:20000000},
+  {label:'20–25 Jt',min:20000000, max:25000000},
+  {label:'>25 Jt',  min:25000000, max:Infinity},
+];
+
+let RAW = [];
+let activeMetric = 'count';
+let activeGran   = 'monthly';
+let CHARTS = {};
+
+function getFee(n){ return n <= 25000000 ? n * 0.014 : 350000; }
+function fmtNum(n){
+  if(n >= 1e9)  return (n/1e9).toFixed(1)+'B';
+  if(n >= 1e6)  return (n/1e6).toFixed(1)+' Jt';
+  if(n >= 1e3)  return (n/1e3).toFixed(0)+'K';
+  return n.toLocaleString('id-ID');
+}
+function fmtPct(v){ return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
+
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { font: { family: 'DM Mono', size: 11 }, color: '#7a8fa6', boxWidth: 12, padding: 16 } },
+    tooltip: { backgroundColor: '#fff', titleColor: '#0f1f35', bodyColor: '#7a8fa6', borderColor: '#e2e8f0', borderWidth: 1, titleFont: { family: 'DM Mono', size: 12 }, bodyFont: { family: 'DM Mono', size: 11 }, padding: 12 }
+  },
+  scales: {
+    x: { grid: { color: '#f1f5f9', drawBorder: false }, ticks: { font: { family: 'DM Mono', size: 10 }, color: '#7a8fa6', maxRotation: 45 }, border: { display: false } },
+    y: { grid: { color: '#f1f5f9', drawBorder: false }, ticks: { font: { family: 'DM Mono', size: 10 }, color: '#7a8fa6', callback: v => fmtNum(v) }, border: { display: false } }
+  }
+};
+
+// ── LOAD ─────────────────────────────────────────────────
+async function loadData(){
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+
+  try {
+    const res  = await fetch(SCRIPT_URL);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if(!Array.isArray(json)) throw new Error('Format tidak valid');
+
+    RAW = json.filter(r => r && r.year && r.count > 0);
+
+    document.getElementById('last-updated').textContent =
+      new Date().toLocaleString('id-ID', {dateStyle:'medium', timeStyle:'short'});
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderAll();
+
+  } catch(err){
+    document.getElementById('loading').style.display = 'none';
+    const eb = document.getElementById('error-banner');
+    eb.style.display = 'block';
+    eb.textContent = 'Gagal memuat data: ' + err.message;
+    document.getElementById('app').style.display = 'block';
+  }
+}
+
+// ── AGGREGATIONS ─────────────────────────────────────────
+function getMonthly(){
+  const map = {};
+  RAW.forEach(r => {
+    const k = `${r.year}_${String(r.month).padStart(2,'0')}`;
+    if(!map[k]) map[k] = { year: r.year, month: r.month, count: 0, nominal: 0, users: 0, fee: 0 };
+    map[k].count  += r.count;
+    map[k].nominal += r.total_nominal;
+    map[k].users  += r.unique_users || 0;
+    map[k].fee    += r.count * getFee(r.total_nominal / (r.count || 1));
+  });
+  return Object.values(map).sort((a,b) => a.year!==b.year ? a.year-b.year : a.month-b.month);
+}
+
+function getWeekly(){
+  const map = {};
+  RAW.forEach(r => {
+    const k = `${r.year}_${String(r.month).padStart(2,'0')}_${r.week}`;
+    if(!map[k]) map[k] = { year: r.year, month: r.month, week: r.week, count: 0, nominal: 0, fee: 0 };
+    map[k].count   += r.count;
+    map[k].nominal += r.total_nominal;
+    map[k].fee     += r.count * getFee(r.total_nominal / (r.count || 1));
+  });
+  return Object.values(map).sort((a,b) =>
+    a.year!==b.year ? a.year-b.year : a.month!==b.month ? a.month-b.month : a.week-b.week
+  );
+}
+
+function movingAvg(arr, n=3){
+  return arr.map((_, i) => {
+    if(i < n-1) return null;
+    return arr.slice(i-n+1, i+1).reduce((s,v)=>s+v,0) / n;
+  });
+}
+
+function linearRegression(arr){
+  const n = arr.length;
+  const xMean = (n-1)/2;
+  const yMean = arr.reduce((s,v)=>s+v,0)/n;
+  let num=0, den=0;
+  arr.forEach((y,x) => { num += (x-xMean)*(y-yMean); den += (x-xMean)**2; });
+  const slope = den ? num/den : 0;
+  const intercept = yMean - slope*xMean;
+  return { slope, intercept, predict: x => slope*x + intercept };
+}
+
+// ── RENDER ALL ───────────────────────────────────────────
+function renderAll(){
+  buildKPIs();
+  renderTrend();
+  renderCumulative();
+  renderRevByNominal();
+  renderMoM();
+  renderHeatmap();
+  renderForecast();
+  renderAnomalies();
+}
+
+function destroyChart(id){ if(CHARTS[id]){ CHARTS[id].destroy(); delete CHARTS[id]; } }
+
+// ── KPIs ─────────────────────────────────────────────────
+function buildKPIs(){
+  const monthly = getMonthly();
+  const last  = monthly[monthly.length-1];
+  const prev  = monthly[monthly.length-2];
+
+  // Total fee across all data
+  const totalFee = RAW.reduce((s,r) => s + r.count * getFee(r.total_nominal/(r.count||1)), 0);
+  const totalTrx = RAW.reduce((s,r) => s + r.count, 0);
+
+  // Latest month stats
+  const lastFee  = last ? last.fee   : 0;
+  const prevFee  = prev ? prev.fee   : 0;
+  const lastTrx  = last ? last.count : 0;
+  const prevTrx  = prev ? prev.count : 0;
+  const growthFee = prevFee ? ((lastFee-prevFee)/prevFee*100) : 0;
+  const growthTrx = prevTrx ? ((lastTrx-prevTrx)/prevTrx*100) : 0;
+
+  // Latest unique users
+  const latestRaw = RAW.filter(r => last && r.year===last.year && r.month===last.month);
+  const latestUsers = latestRaw.reduce((s,r)=>s+(r.unique_users||0),0);
+  const prevRaw = RAW.filter(r => prev && r.year===prev.year && r.month===prev.month);
+  const prevUsers = prevRaw.reduce((s,r)=>s+(r.unique_users||0),0);
+  const growthUsers = prevUsers ? ((latestUsers-prevUsers)/prevUsers*100) : 0;
+
+  document.getElementById('kpi-revenue').textContent = fmtNum(totalFee);
+  document.getElementById('kpi-trx').textContent     = fmtNum(totalTrx);
+  document.getElementById('kpi-growth').textContent  = fmtPct(growthFee);
+  document.getElementById('kpi-users').textContent   = fmtNum(latestUsers);
+
+  const setBadge = (id, val) => {
+    const el = document.getElementById(id);
+    el.textContent = fmtPct(val);
+    el.className = 'kpi-badge ' + (val > 0 ? 'badge-up' : val < 0 ? 'badge-down' : 'badge-neu');
+  };
+  setBadge('kpi-revenue-badge', growthFee);
+  setBadge('kpi-trx-badge',     growthTrx);
+  setBadge('kpi-growth-badge',  growthFee);
+  setBadge('kpi-users-badge',   growthUsers);
+
+  document.getElementById('trend-total').textContent = 'Total: ' + fmtNum(totalFee);
+}
+
+// ── TREND ────────────────────────────────────────────────
+function renderTrend(){
+  destroyChart('trend');
+  const src    = activeGran === 'monthly' ? getMonthly() : getWeekly();
+  const metric = activeMetric === 'count' ? 'count' : 'fee';
+  const labels = src.map(r =>
+    activeGran === 'monthly'
+      ? `${MONTHS[r.month-1]} '${String(r.year).slice(2)}`
+      : `W${r.week} ${MONTHS[r.month-1]}`
+  );
+  const vals = src.map(r => r[metric]);
+  const ma   = movingAvg(vals, 3);
+
+  CHARTS['trend'] = new Chart(document.getElementById('chart-trend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: activeMetric === 'count' ? 'Transaksi' : 'Revenue (Fee)',
+          data: vals,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#2563eb',
+          fill: true,
+          tension: 0.4,
+        },
+        {
+          label: '3-Period MA',
+          data: ma,
+          borderColor: '#dc2626',
+          borderWidth: 2,
+          borderDash: [5,4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+          spanGaps: true,
+        }
+      ]
+    },
+    options: { ...CHART_DEFAULTS, interaction: { mode: 'index', intersect: false } }
+  });
+}
+
+// ── CUMULATIVE ───────────────────────────────────────────
+function renderCumulative(){
+  destroyChart('cumulative');
+  const monthly = getMonthly();
+  const labels  = monthly.map(r => `${MONTHS[r.month-1]} '${String(r.year).slice(2)}`);
+
+  let cumTrx = 0, cumFee = 0;
+  const cumTrxArr = monthly.map(r => { cumTrx += r.count;   return cumTrx; });
+  const cumFeeArr = monthly.map(r => { cumFee += r.fee;     return cumFee; });
+
+  CHARTS['cumulative'] = new Chart(document.getElementById('chart-cumulative'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Kumulatif Transaksi',
+          data: cumTrxArr,
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5,150,105,0.06)',
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Kumulatif Fee',
+          data: cumFeeArr,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.04)',
+          borderWidth: 2,
+          borderDash: [4,3],
+          fill: false,
+          tension: 0.4,
+          pointRadius: 2,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        ...CHART_DEFAULTS.scales,
+        y:  { ...CHART_DEFAULTS.scales.y, position: 'left' },
+        y2: { ...CHART_DEFAULTS.scales.y, position: 'right', grid: { display: false } },
+      }
+    }
+  });
+}
+
+// ── REVENUE BY NOMINAL ───────────────────────────────────
+function renderRevByNominal(){
+  destroyChart('revnom');
+  const binFee = BINS.map(bin => {
+    return RAW
+      .filter(r => {
+        const avg = r.total_nominal / (r.count || 1);
+        return avg >= bin.min && avg < bin.max;
+      })
+      .reduce((s,r) => s + r.count * getFee(r.total_nominal/(r.count||1)), 0);
+  });
+
+  CHARTS['revnom'] = new Chart(document.getElementById('chart-revnom'), {
+    type: 'doughnut',
+    data: {
+      labels: BINS.map(b=>b.label),
+      datasets: [{
+        data: binFee,
+        backgroundColor: ['#bfdbfe','#60a5fa','#2563eb','#1d4ed8','#1e3a8a'],
+        borderColor: '#fff',
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'DM Mono', size: 11 }, color: '#7a8fa6', boxWidth: 12, padding: 12 } },
+        tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.label}: ${fmtNum(ctx.raw)}` } }
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+// ── MoM ──────────────────────────────────────────────────
+function renderMoM(){
+  destroyChart('mom');
+  const monthly = getMonthly();
+  const metric  = activeMetric === 'count' ? 'count' : 'fee';
+  const vals    = monthly.map(r => r[metric]);
+  const growth  = vals.map((v,i) => {
+    if(i===0 || vals[i-1]===0) return null;
+    return +((v-vals[i-1])/vals[i-1]*100).toFixed(1);
+  });
+  const labels = monthly.map(r => `${MONTHS[r.month-1]} '${String(r.year).slice(2)}`);
+
+  CHARTS['mom'] = new Chart(document.getElementById('chart-mom'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'MoM Growth %',
+        data: growth,
+        backgroundColor: growth.map(v => v === null ? 'transparent' : v >= 0 ? 'rgba(5,150,105,0.7)' : 'rgba(220,38,38,0.7)'),
+        borderColor:     growth.map(v => v === null ? 'transparent' : v >= 0 ? '#059669' : '#dc2626'),
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } },
+      scales: {
+        ...CHART_DEFAULTS.scales,
+        y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => v+'%' } }
+      }
+    }
+  });
+}
+
+// ── HEATMAP ───────────────────────────────────────────────
+function renderHeatmap(){
+  const wrap   = document.getElementById('heatmap-wrap');
+  const metric = activeMetric === 'count' ? 'count' : 'fee';
+  const monthly = getMonthly();
+  const years   = [...new Set(monthly.map(r=>r.year))].sort();
+
+  // Build lookup
+  const lookup = {};
+  monthly.forEach(r => { lookup[`${r.year}_${r.month}`] = r[metric]; });
+  const allVals = Object.values(lookup).filter(v=>v>0);
+  const maxVal  = Math.max(...allVals);
+
+  function hmColor(intensity){
+    if(intensity === 0) return { bg: '#f1f5f9', text: 'transparent' };
+    if(intensity < 0.15) return { bg: '#dbeafe', text: '#93c5fd' };
+    if(intensity < 0.35) return { bg: '#93c5fd', text: '#1e40af' };
+    if(intensity < 0.55) return { bg: '#3b82f6', text: '#fff' };
+    if(intensity < 0.75) return { bg: '#1d4ed8', text: '#fff' };
+    if(intensity < 0.90) return { bg: '#f59e0b', text: '#fff' };
+    return { bg: '#dc2626', text: '#fff' };
+  }
+
+  let html = `<div class="hm-grid">`;
+  // Header row
+  html += `<div class="hm-label"></div>`;
+  MONTHS.forEach(m => { html += `<div class="hm-month-label">${m}</div>`; });
+  // Data rows
+  years.forEach(yr => {
+    html += `<div class="hm-label">${yr}</div>`;
+    for(let mo=1; mo<=12; mo++){
+      const val       = lookup[`${yr}_${mo}`] || 0;
+      const intensity = maxVal ? val/maxVal : 0;
+      const { bg, text } = hmColor(intensity);
+      const display = val > 0 ? (val >= 1000 ? Math.round(val/1000)+'K' : val) : '';
+      html += `<div class="hm-cell" style="background:${bg};color:${text}" title="${MONTHS[mo-1]} ${yr}: ${fmtNum(val)}">${display}</div>`;
+    }
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+
+// ── FORECAST ─────────────────────────────────────────────
+function renderForecast(){
+  destroyChart('forecast');
+  const monthly = getMonthly();
+  const metric  = activeMetric === 'count' ? 'count' : 'fee';
+  const vals    = monthly.map(r => r[metric]);
+  const reg     = linearRegression(vals);
+
+  const histLabels = monthly.map(r => `${MONTHS[r.month-1]} '${String(r.year).slice(2)}`);
+  const forecastLabels = [];
+  const lastMonthData = monthly[monthly.length-1];
+  let yr = lastMonthData?.year || 2026;
+  let mo = lastMonthData?.month || 1;
+  for(let i=1; i<=3; i++){
+    mo++;
+    if(mo>12){ mo=1; yr++; }
+    forecastLabels.push(`${MONTHS[mo-1]} '${String(yr).slice(2)}`);
+  }
+
+  const allLabels  = [...histLabels, ...forecastLabels];
+  const histData   = [...vals, null, null, null];
+  const forecastData = [...vals.map(()=>null)];
+  // Connect last point
+  forecastData[forecastData.length-1] = vals[vals.length-1];
+  for(let i=1; i<=3; i++){
+    forecastData.push(Math.max(0, Math.round(reg.predict(vals.length-1+i))));
+  }
+
+  CHARTS['forecast'] = new Chart(document.getElementById('chart-forecast'), {
+    type: 'line',
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: 'Aktual',
+          data: histData,
+          borderColor: '#2563eb',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: false,
+          tension: 0.3,
+          spanGaps: false,
+        },
+        {
+          label: 'Forecast',
+          data: forecastData,
+          borderColor: '#d97706',
+          borderWidth: 2,
+          borderDash: [6,4],
+          pointRadius: 3,
+          pointBackgroundColor: '#d97706',
+          fill: false,
+          tension: 0.3,
+          spanGaps: true,
+        }
+      ]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins },
+      interaction: { mode: 'index', intersect: false }
+    }
+  });
+
+  // Forecast table
+  const listEl = document.getElementById('forecast-list');
+  listEl.innerHTML = '';
+  let fy = lastMonthData?.year || 2026;
+  let fm = lastMonthData?.month || 1;
+  for(let i=1; i<=3; i++){
+    fm++; if(fm>12){ fm=1; fy++; }
+    const predicted = Math.max(0, Math.round(reg.predict(vals.length-1+i)));
+    const div = document.createElement('div');
+    div.className = 'forecast-row';
+    div.innerHTML = `<span class="forecast-label">${MONTHS[fm-1]} ${fy}</span><span class="forecast-val">${fmtNum(predicted)}</span>`;
+    listEl.appendChild(div);
+  }
+}
+
+// ── ANOMALY ──────────────────────────────────────────────
+function renderAnomalies(){
+  const monthly = getMonthly();
+  const metric  = activeMetric === 'count' ? 'count' : 'fee';
+  const vals    = monthly.map(r => r[metric]);
+  const mean    = vals.reduce((s,v)=>s+v,0) / (vals.length||1);
+  const std     = Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/(vals.length||1));
+  const threshold = 1.5;
+
+  const anomalies = monthly
+    .map((r,i) => ({ ...r, val: vals[i], zscore: std ? (vals[i]-mean)/std : 0 }))
+    .filter(r => Math.abs(r.zscore) >= threshold)
+    .sort((a,b) => Math.abs(b.zscore)-Math.abs(a.zscore));
+
+  const listEl = document.getElementById('anomaly-list');
+  listEl.innerHTML = '';
+
+  if(anomalies.length === 0){
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:16px;text-align:center">Tidak ada anomali terdeteksi ✓</div>';
+    return;
+  }
+
+  anomalies.slice(0,8).forEach(r => {
+    const isHigh = r.zscore > 0;
+    const div = document.createElement('div');
+    div.className = 'anomaly-item ' + (isHigh ? 'high' : 'low');
+    div.innerHTML = `
+      <div class="anomaly-dot"></div>
+      <div class="anomaly-period">${MONTHS[r.month-1]} ${r.year}</div>
+      <div class="anomaly-desc">${isHigh ? '▲ Unusually high' : '▼ Unusually low'} (${r.zscore > 0 ? '+' : ''}${r.zscore.toFixed(1)}σ)</div>
+      <div class="anomaly-val">${fmtNum(r.val)}</div>`;
+    listEl.appendChild(div);
+  });
+}
+
+// ── CONTROLS ─────────────────────────────────────────────
+function setMetric(m){
+  activeMetric = m;
+  document.querySelectorAll('[data-m]').forEach(b => b.classList.toggle('active', b.dataset.m===m));
+  renderAll();
+}
+function setGran(g){
+  activeGran = g;
+  document.querySelectorAll('[data-g]').forEach(b => b.classList.toggle('active', b.dataset.g===g));
+  renderTrend();
+}
+
+loadData();
+</script>
+</body>
+</html>

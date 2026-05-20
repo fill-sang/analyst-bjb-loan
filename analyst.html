@@ -304,8 +304,8 @@ body { background: var(--bg); font-family: 'DM Mono', monospace; color: var(--te
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <div class="chart-title">MoM Comparison</div>
-            <div class="chart-sub">PERTUMBUHAN BULAN KE BULAN (%)</div>
+            <div class="chart-title">Monthly Growth Momentum</div>
+            <div class="chart-sub">DIVERGING BARS: EXPANSION (▲) VS CONTRACTION (▼)</div>
           </div>
         </div>
         <div class="chart-wrap h240"><canvas id="chart-mom"></canvas></div>
@@ -661,7 +661,7 @@ function renderRevByNominal(){
   });
 }
 
-// ── MoM ──────────────────────────────────────────────────
+// ── MoM: DIVERGING BARS ──────────────────────────────────
 function renderMoM(){
   destroyChart('mom');
   const monthly = getMonthly();
@@ -673,26 +673,77 @@ function renderMoM(){
   });
   const labels = monthly.map(r => `${MONTHS[r.month-1]} '${String(r.year).slice(2)}`);
 
+  // Diverging bar setup: separate growth into positive and negative datasets
+  const positiveGrowth = growth.map((v, i) => v !== null && v >= 0 ? v : 0);
+  const negativeGrowth = growth.map((v, i) => v !== null && v < 0 ? Math.abs(v) : 0);
+
   CHARTS['mom'] = new Chart(document.getElementById('chart-mom'), {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'MoM Growth %',
-        data: growth,
-        backgroundColor: growth.map(v => v === null ? 'transparent' : v >= 0 ? 'rgba(5,150,105,0.8)' : 'rgba(220,38,38,0.8)'),
-        borderColor:     growth.map(v => v === null ? 'transparent' : v >= 0 ? '#059669' : '#dc2626'),
-        borderWidth: 2,
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
+      datasets: [
+        {
+          label: 'Growth ↑',
+          data: positiveGrowth,
+          backgroundColor: growth.map((v, i) => {
+            if(v === null || v < 0) return 'transparent';
+            if(v > 20) return 'rgba(5, 150, 105, 0.95)'; // Deep green
+            if(v > 10) return 'rgba(16, 185, 129, 0.85)'; // Medium green
+            return 'rgba(167, 243, 208, 0.8)'; // Light green
+          }),
+          borderColor: growth.map((v, i) => {
+            if(v === null || v < 0) return 'transparent';
+            if(v > 20) return '#047857'; // Deep green
+            if(v > 10) return '#059669'; // Medium green
+            return '#6ee7b7'; // Light green
+          }),
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Decline ▼',
+          data: negativeGrowth,
+          backgroundColor: growth.map((v, i) => {
+            if(v === null || v >= 0) return 'transparent';
+            if(Math.abs(v) > 20) return 'rgba(220, 38, 38, 0.95)'; // Deep red
+            if(Math.abs(v) > 10) return 'rgba(239, 68, 68, 0.85)'; // Medium red
+            return 'rgba(254, 202, 202, 0.8)'; // Light red
+          }),
+          borderColor: growth.map((v, i) => {
+            if(v === null || v >= 0) return 'transparent';
+            if(Math.abs(v) > 20) return '#7f1d1d'; // Deep red
+            if(Math.abs(v) > 10) return '#dc2626'; // Medium red
+            return '#fca5a5'; // Light red
+          }),
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+        }
+      ]
     },
     options: {
-      ...CHART_DEFAULTS,
-      plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } },
+      indexAxis: 'x',
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        legend: { display: true, labels: { font: { family: 'DM Mono', size: 11, weight: '600' }, color: '#7a8fa6', boxWidth: 12, padding: 16 } },
+        tooltip: {
+          ...CHART_DEFAULTS.plugins.tooltip,
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.raw;
+              if(val === 0) return '';
+              const actualGrowth = ctx.datasetIndex === 0 ? val : -val;
+              return ` ${actualGrowth > 0 ? '+' : ''}${actualGrowth.toFixed(1)}%`;
+            }
+          }
+        }
+      },
       scales: {
-        ...CHART_DEFAULTS.scales,
-        y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => v+'%' } }
+        x: { stacked: true, grid: { color: '#f1f5f9', drawBorder: false }, ticks: { font: { family: 'DM Mono', size: 10, weight: '500' }, color: '#7a8fa6', maxRotation: 45 }, border: { display: false } },
+        y: { stacked: true, grid: { color: '#f1f5f9', drawBorder: false }, ticks: { font: { family: 'DM Mono', size: 10, weight: '500' }, color: '#7a8fa6', callback: v => v+'%' }, border: { display: false } }
       }
     }
   });
